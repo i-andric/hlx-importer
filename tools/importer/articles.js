@@ -1,3 +1,28 @@
+const makeProxySrcs = (main, host) => {
+  main.querySelectorAll('img').forEach((img) => {
+    if (img.src.startsWith('/')) {
+      // make absolute
+      const cu = new URL(host);
+      img.src = `${cu.origin}${img.src}`;
+    }
+
+    const u = new URL(img.src);
+    
+    try {
+      const u = new URL(img.src);
+      if(u.origin != 'http://localhost:3001') {
+        u.searchParams.append('host', u.origin);
+        img.src = `http://localhost:3001${u.pathname}${u.search}`;
+      } else {
+        img.src =  `http://localhost:3001${u.pathname}`;
+      }
+      
+    } catch (error) {
+      console.warn(`Unable to make proxy src for ${img.src}: ${error.message}`);
+    }
+  });
+};
+
 const createMetadataBlock = (main, document, html, params, urlStr) => {
   const meta = {};
 
@@ -206,18 +231,27 @@ export default {
     // Convert hubspot buttons into links
     const ctaWrappers = document.querySelectorAll('.hs-cta-wrapper');
     ctaWrappers.forEach((wrapper) => {
-      console.log('wrapper', wrapper);
       const ctaButton = wrapper.querySelector('a');
       if (ctaButton) {
-        const buttonText = ctaButton.querySelector('img').getAttribute('alt');
+        const imageSrc = ctaButton.querySelector('img').getAttribute('src');
+        const imageAlt = ctaButton.querySelector('img').getAttribute('alt');
         const buttonLink = ctaButton.getAttribute('href');
 
-        console.log(`CTA Button Found: ${buttonText} (${buttonLink})`);
+        const newParagraph = document.createElement('p');
+
+        const newImage = document.createElement('img');
+        newImage.setAttribute('src', imageSrc);
+        newImage.setAttribute('alt', imageAlt);
 
         const newButton = document.createElement('a');
         newButton.setAttribute('href', buttonLink);
-        newButton.textContent = buttonText;
-        main.append(newButton);
+        newButton.innerText = imageAlt;
+        newParagraph.append(newImage);
+        newParagraph.append(newButton);
+
+        makeProxySrcs(main, imageSrc);
+      
+        ctaButton.replaceWith(newParagraph);
       }
     });
 
@@ -270,7 +304,6 @@ export default {
 
     if (elementWithText) {
       elementWithText.remove();
-      console.log('Removed element containing text:', unwantedText);
     }
 
     let p = new URL(params.originalURL).pathname
