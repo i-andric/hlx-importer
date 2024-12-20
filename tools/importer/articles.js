@@ -7,18 +7,43 @@ const makeProxySrcs = (main, host) => {
     }
 
     const u = new URL(img.src);
-    
+
     try {
       const u = new URL(img.src);
-      if(u.origin != 'http://localhost:3001') {
+      if (u.origin != 'http://localhost:3001') {
         u.searchParams.append('host', u.origin);
         img.src = `http://localhost:3001${u.pathname}${u.search}`;
       } else {
-        img.src =  `http://localhost:3001${u.pathname}`;
+        img.src = `http://localhost:3001${u.pathname}`;
       }
-      
     } catch (error) {
       console.warn(`Unable to make proxy src for ${img.src}: ${error.message}`);
+    }
+  });
+};
+
+const normalizeLink = (href) => {
+  if (!href) return ''; // Handle empty or invalid input
+
+  return decodeURIComponent(href)
+    .normalize('NFD') // Decompose characters into base letters and diacritics
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritical marks
+    .replace(/[^a-zA-Z0-9\-./:]/g, '') // Remove special characters except allowed ones
+    .replace(/\s+/g, '-') // Replace spaces with dashes
+    .toLowerCase(); // Convert to lowercase for consistency
+  }
+
+const transformLinks = (main) => {
+  main.querySelectorAll('a').forEach((anchor) => {
+    const href = anchor.getAttribute('href');
+    if (href) {
+      try {
+        // Normalize the href link
+        const normalizedHref = normalizeLink(href);
+        anchor.setAttribute('href', normalizedHref);
+      } catch (error) {
+        console.warn(`Unable to normalize link: ${href} - ${error.message}`);
+      }
     }
   });
 };
@@ -250,7 +275,7 @@ export default {
         newParagraph.append(newButton);
 
         makeProxySrcs(main, imageSrc);
-      
+
         ctaButton.replaceWith(newParagraph);
       }
     });
@@ -306,9 +331,16 @@ export default {
       elementWithText.remove();
     }
 
+
     let p = new URL(params.originalURL).pathname
       .replace(/\/$/, '')
       .replace(/\.html$/, '');
+      console.log('link before', p);
+    p = normalizeLink(p);
+    console.log('link after', p);
+
+    const topicWithDashes = topic.trim().replace(/\s+/g, '-');
+    const articlePath = `${topicWithDashes}${p}`;
 
     if (topic != '') {
       p = `/${topic}/${p}`;
@@ -320,13 +352,20 @@ export default {
       p = `${p}index`;
     }
 
+    transformLinks(main);
+
+    const newUrl =
+      'https://main--eplan-blog-eds--comwrap.hlx.page/cz-cs/blog/' +
+      articlePath;
+
     return [
       {
         element: main,
         path: p,
         report: {
-          category: topic,
-          tags: tagsFinal,
+          newUrl: newUrl,
+          previousTags: tagsFinal,
+          currentCategory: topic,
         },
       },
     ];
