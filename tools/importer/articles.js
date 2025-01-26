@@ -1,3 +1,8 @@
+const menuTopics = ['tips', 'processen', 'projecten', 'astuces', 'processus', 'projets'];
+const youtubeMessage = 'Om deze video te bekijken, moet u de functionele cookies accepteren.';
+const blogLangCountry = 'bl-nl';
+
+
 const makeProxySrcs = (main, host) => {
   main.querySelectorAll('img').forEach((img) => {
     if (img.src.startsWith('/')) {
@@ -22,6 +27,17 @@ const makeProxySrcs = (main, host) => {
   });
 };
 
+const replaceAllEplanStrings = (main) => {
+  // Function to traverse all text nodes and replace "EPLAN" with "Eplan"
+  const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT, null, false);
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node.nodeValue.includes('EPLAN')) {
+      node.nodeValue = node.nodeValue.replace(/EPLAN/g, 'Eplan');
+    }
+  }
+};
+
 const normalizeLink = (href) => {
   if (!href) return ''; // Handle empty or invalid input
 
@@ -31,7 +47,7 @@ const normalizeLink = (href) => {
     .replace(/[^a-zA-Z0-9\-./:]/g, '') // Remove special characters except allowed ones
     .replace(/\s+/g, '-') // Replace spaces with dashes
     .toLowerCase(); // Convert to lowercase for consistency
-  }
+};
 
 const transformLinks = (main) => {
   main.querySelectorAll('a').forEach((anchor) => {
@@ -172,7 +188,7 @@ export default {
 
         let div = documentRef.createElement('div');
 
-        // If you wante to fill in TOC with h2s then uncomment bellow lines
+        // If you want to fill in TOC with h2s then uncomment bellow lines
         // div.setAttribute('class', heading.tagName.toLowerCase());
         // div.appendChild(link);
 
@@ -282,7 +298,6 @@ export default {
 
     createMetadataBlock(main, document);
 
-    const menuTopics = ['trendy', 'eplan v praxi', 'tipy a triky'];
     let topic = '';
     let topicFromTag = '';
     let tagsFinal = '';
@@ -321,21 +336,22 @@ export default {
       '.pillar_page_module',
     ]);
 
-    const unwantedText =
-      'Chcete-li zobrazit toto video, musíte přijmout funkční soubory cookie.';
+    // Remove unwanted text - cookie/youtube warning because it is copying it as text
     const elementWithText = Array.from(document.querySelectorAll('*')).find(
-      (el) => el.textContent.trim() === unwantedText
+      (el) => el.textContent.trim() === youtubeMessage
     );
 
     if (elementWithText) {
       elementWithText.remove();
     }
 
+    // Replace all "EPLAN" with "Eplan"
+    replaceAllEplanStrings(main);
 
     let p = new URL(params.originalURL).pathname
       .replace(/\/$/, '')
       .replace(/\.html$/, '');
-      console.log('link before', p);
+    console.log('link before', p);
     p = normalizeLink(p);
     console.log('link after', p);
 
@@ -355,7 +371,7 @@ export default {
     transformLinks(main);
 
     const newUrl =
-      'https://main--eplan-blog-eds--comwrap.hlx.page/cz-cs/blog/' +
+      'https://main--eplan-blog-eds--comwrap.hlx.page/' + blogLangCountry + '/blog/' +
       articlePath;
 
     return [
