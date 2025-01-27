@@ -296,6 +296,34 @@ export default {
       }
     });
 
+    // Add handling for linked images
+    const linkedImages = main.querySelectorAll('a > img');
+    linkedImages.forEach((img) => {
+      const link = img.parentElement;
+      if (link.tagName === 'A') {
+        const imageSrc = img.getAttribute('src');
+        const imageAlt = img.getAttribute('alt') || '';
+        const linkHref = link.getAttribute('href');
+
+        const newParagraph = document.createElement('p');
+        
+        const newImage = document.createElement('img');
+        newImage.setAttribute('src', imageSrc);
+        newImage.setAttribute('alt', imageAlt);
+
+        const newLink = document.createElement('a');
+        newLink.setAttribute('href', linkHref);
+        newLink.textContent = imageAlt || linkHref;
+
+        newParagraph.append(newImage);
+        newParagraph.append(newLink);
+
+        makeProxySrcs(newParagraph, imageSrc);
+
+        link.replaceWith(newParagraph);
+      }
+    });
+
     createMetadataBlock(main, document);
 
     let topic = '';
