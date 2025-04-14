@@ -77,8 +77,7 @@ export default {
       p = `${p}index`;
     }
     return decodeURIComponent(p)
-      .toLowerCase()
       .replace(/\.html$/, '')
-      .replace(/[^a-z0-9/]/gm, '-');
+      .trim();
   },
 };
