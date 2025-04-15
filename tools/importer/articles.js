@@ -1,7 +1,11 @@
-const menuTopics = ['tips', 'processen', 'projecten', 'astuces', 'processus', 'projets'];
-const youtubeMessage = 'Om deze video te bekijken, moet u de functionele cookies accepteren.';
-const blogLangCountry = 'bl-nl';
-
+const menuTopics = [
+  'tips',
+  'processen',
+  'projecten'
+];
+const youtubeMessage =
+  'Om deze video te bekijken, moet u de functionele cookies accepteren.';
+const blogLangCountry = 'be-nl';
 
 const makeProxySrcs = (main, host) => {
   main.querySelectorAll('img').forEach((img) => {
@@ -29,7 +33,12 @@ const makeProxySrcs = (main, host) => {
 
 const replaceAllEplanStrings = (main) => {
   // Function to traverse all text nodes and replace "EPLAN" with "Eplan"
-  const walker = document.createTreeWalker(main, NodeFilter.SHOW_TEXT, null, false);
+  const walker = document.createTreeWalker(
+    main,
+    NodeFilter.SHOW_TEXT,
+    null,
+    false
+  );
   let node;
   while ((node = walker.nextNode())) {
     if (node.nodeValue.includes('EPLAN')) {
@@ -41,6 +50,18 @@ const replaceAllEplanStrings = (main) => {
 const normalizeLink = (href) => {
   if (!href) return ''; // Handle empty or invalid input
 
+  try {
+    // Try to parse the URL to detect if it's a complex URL with query parameters
+    const url = new URL(href);
+    if (url.search || url.hash) {
+      // If URL has query parameters or hash, return it as-is
+      return href;
+    }
+  } catch (e) {
+    // If URL parsing fails, proceed with normalization
+  }
+
+  // For simple URLs, apply normalization
   return decodeURIComponent(href)
     .normalize('NFD') // Decompose characters into base letters and diacritics
     .replace(/[\u0300-\u036f]/g, '') // Remove diacritical marks
@@ -269,31 +290,71 @@ export default {
       }
     });
 
-    // Convert hubspot buttons into links
-    const ctaWrappers = document.querySelectorAll('.hs-cta-wrapper');
-    ctaWrappers.forEach((wrapper) => {
-      const ctaButton = wrapper.querySelector('a');
-      if (ctaButton) {
-        const imageSrc = ctaButton.querySelector('img').getAttribute('src');
-        const imageAlt = ctaButton.querySelector('img').getAttribute('alt');
-        const buttonLink = ctaButton.getAttribute('href');
+    // Get all hubspot embeds
+    const hubspotEmbeds = document.querySelectorAll('.hs-cta-embed__loaded');
 
-        const newParagraph = document.createElement('p');
+    hubspotEmbeds.forEach((hubspotEmbed) => {
+      const iframes = hubspotEmbed.querySelectorAll('iframe');
+    
+      iframes.forEach((iframe) => {
+        if (iframe) {
+          console.log('IFRAME', iframe);
+          const iframeImage = document.createElement('img');
+          const iframeSrc = iframe.src;
+          try {
+            const u = new URL(iframeSrc);
+            const originalHost = u.hostname.includes('hs-sites.com') ? u.origin : 'https://blog.eplan.co.uk';
+            u.searchParams.set('host', originalHost);
+    
+            const imageUrl = `http://localhost:3001${u.pathname}${u.search}`;
+            console.log("Fetching image from:", imageUrl);
+    
+            // Fetch image and convert to Base64
+            fetch(imageUrl, {
+              mode: 'cors',
+              headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET',
+                'Access-Control-Allow-Headers': 'Content-Type'
+              }
+            })
+              .then(response => {
+                if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                return response.blob();
+              })
+              .then(blob => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  iframeImage.setAttribute('src', reader.result);
+                  iframeImage.setAttribute('alt', 'Embedded Content');
+                  iframeImage.style.maxWidth = "100%"; // Ensure proper scaling
+                  
+                  // Ensure it's not wrapped in a link
+                  const parent = iframe.parentElement;
+                  console.log('parent TAG NAME: ', parent);
+                  console.log('iframe image: ', iframeImage);
 
-        const newImage = document.createElement('img');
-        newImage.setAttribute('src', imageSrc);
-        newImage.setAttribute('alt', imageAlt);
-
-        const newButton = document.createElement('a');
-        newButton.setAttribute('href', buttonLink);
-        newButton.innerText = imageAlt;
-        newParagraph.append(newImage);
-        newParagraph.append(newButton);
-
-        makeProxySrcs(main, imageSrc);
-
-        ctaButton.replaceWith(newParagraph);
-      }
+                  if (parent.tagName === "A") {
+                    console.log('it is a');
+                    parent.replaceWith(iframeImage);
+                  } else {
+                    console.log('it is NOT a');
+                    iframe.replaceWith(iframeImage);
+                  }
+    
+                  console.log("Image successfully embedded.", iframeImage);
+                };
+                reader.readAsDataURL(blob);
+              })
+              .catch(error => {
+                console.warn(`Failed to load image: ${error.message}`);
+              });
+    
+          } catch (error) {
+            console.warn(`Unable to process iframe ${iframeSrc}: ${error.message}`);
+          }
+        }
+      });
     });
 
     // Add handling for linked images
@@ -304,9 +365,9 @@ export default {
         const imageSrc = img.getAttribute('src');
         const imageAlt = img.getAttribute('alt') || '';
         const linkHref = link.getAttribute('href');
-
+        console.log('linkedImages: ', linkedImages);
         const newParagraph = document.createElement('p');
-        
+
         const newImage = document.createElement('img');
         newImage.setAttribute('src', imageSrc);
         newImage.setAttribute('alt', imageAlt);
@@ -323,6 +384,59 @@ export default {
         link.replaceWith(newParagraph);
       }
     });
+
+    // Convert teaser text to block
+    const teaserText = main.querySelector('#hs_cos_wrapper_blog_post_teaser_text');
+    if (teaserText) {
+      // Instead of just getting textContent, get the HTML content to preserve formatting
+      const teaserContent = teaserText.innerHTML.trim();
+      if (teaserContent) {
+        // Create a temporary div to handle HTML content properly
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = teaserContent;
+        
+        // Preserve bold tags (both <b> and <strong>)
+        const boldElements = tempDiv.querySelectorAll('b, strong');
+        boldElements.forEach(bold => {
+          const boldText = `<strong>${bold.textContent}</strong>`;
+          bold.replaceWith(boldText);
+        });
+        
+        // Check for elements with inline font-weight style
+        const allElements = tempDiv.querySelectorAll('*');
+        allElements.forEach(element => {
+          const style = window.getComputedStyle(element);
+          const fontWeight = element.style.fontWeight || style.fontWeight;
+          
+          // Check if font-weight is bold, 700, or greater
+          if (fontWeight === 'bold' || parseInt(fontWeight, 10) >= 700) {
+            const boldText = `<strong>${element.textContent}</strong>`;
+            element.replaceWith(boldText);
+          }
+        });
+        
+        const finalTeaserContent = tempDiv.textContent.trim();
+        const teaserCells = [['teasertext'], [finalTeaserContent]];
+        const teaserTable = WebImporter.DOMUtils.createTable(teaserCells, document);
+        
+        // Find the TOC table
+        const tocTable = main.querySelector('table');
+        if (tocTable) {
+          // Insert teaser table after TOC
+          tocTable.after(teaserTable);
+        } else {
+          // If no TOC exists, insert after title as fallback
+          const title = main.querySelector('h1');
+          if (title) {
+            title.after(teaserTable);
+          } else {
+            main.prepend(teaserTable);
+          }
+        }
+        // Remove the original teaser element
+        teaserText.remove();
+      }
+    }
 
     createMetadataBlock(main, document);
 
@@ -399,7 +513,9 @@ export default {
     transformLinks(main);
 
     const newUrl =
-      'https://main--eplan-blog-eds--comwrap.hlx.page/' + blogLangCountry + '/blog/' +
+      'https://main--eplan-blog-eds--comwrap.hlx.page/' +
+      blogLangCountry +
+      '/blog/' +
       articlePath;
 
     return [
