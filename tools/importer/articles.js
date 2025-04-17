@@ -395,26 +395,6 @@ export default {
         const tempDiv = document.createElement('div');
         tempDiv.innerHTML = teaserContent;
         
-        // Preserve bold tags (both <b> and <strong>)
-        const boldElements = tempDiv.querySelectorAll('b, strong');
-        boldElements.forEach(bold => {
-          const boldText = `<strong>${bold.textContent}</strong>`;
-          bold.replaceWith(boldText);
-        });
-        
-        // Check for elements with inline font-weight style
-        const allElements = tempDiv.querySelectorAll('*');
-        allElements.forEach(element => {
-          const style = window.getComputedStyle(element);
-          const fontWeight = element.style.fontWeight || style.fontWeight;
-          
-          // Check if font-weight is bold, 700, or greater
-          if (fontWeight === 'bold' || parseInt(fontWeight, 10) >= 700) {
-            const boldText = `<strong>${element.textContent}</strong>`;
-            element.replaceWith(boldText);
-          }
-        });
-        
         const finalTeaserContent = tempDiv.textContent.trim();
         const teaserCells = [['teasertext'], [finalTeaserContent]];
         const teaserTable = WebImporter.DOMUtils.createTable(teaserCells, document);
