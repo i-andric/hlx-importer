@@ -115,11 +115,42 @@ const listofCurrentArticleLinks = [
   '/be-nl/blog/trends/maak-warmteberekening-makkelijk-met-ritherm',
 ];
 
-const changedLinks = [];
+let changedLinks = [];
 
 const youtubeMessage =
   'Om deze video te bekijken, moet u de functionele cookies accepteren.';
 const blogLangCountry = 'be-nl';
+
+const topicMappings = {
+  // If categories were about to change, we could use this mapping to change them
+  default: {
+    'tips': 'software',
+    'processen': 'trends',
+    'projecten': 'projecten'
+  },
+  // If some of the urls are uncategorized, later we can add them here to map them to a right category
+  urls: {
+    '/nl/hoe-technigroup-de-elektrische-en-mechanische-afdelingen-efficient-laat-samenwerken': 'projecten',
+    '/nl/maak-warmteberekening-makkelijk-met-ritherm': 'trends',
+    '/nl/ontdek-het-nieuwe-eplan-data-portal': 'software',
+    '/nl/leestip-nog-sneller-richting-een-digitale-toekomst-met-het-eplan-platform-2022': 'software'
+  }
+};
+
+const mapTopic = (topic, url) => {
+  // First check if there's a specific URL mapping
+  if (url && topicMappings.urls[url]) {
+    return topicMappings.urls[url];
+  }
+  
+  // Then check default topic mappings
+  if (topicMappings.default[topic]) {
+    return topicMappings.default[topic];
+  }
+  
+  // Return original topic if no mapping found
+  return topic;
+};
 
 const makeProxySrcs = (main, host) => {
   main.querySelectorAll('img').forEach((img) => {
@@ -280,6 +311,9 @@ export default {
     params.foundSomethingInPreprocessing = true;
   },
   transform: ({ document, params }) => {
+    // Reset changedLinks array at the start of each article
+    changedLinks = [];
+    
     const main = document.querySelector('main');
 
     WebImporter.DOMUtils.remove(main, [
@@ -625,6 +659,9 @@ export default {
     console.log('link before', p);
     p = normalizeDocLink(p);
     console.log('link after', p);
+
+    // Apply topic mapping
+    topic = mapTopic(topic, p);
 
     const topicWithDashes = topic.trim().replace(/\s+/g, '-');
     const articlePath = `${topicWithDashes}${p}`;
