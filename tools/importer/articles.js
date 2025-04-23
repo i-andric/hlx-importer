@@ -115,6 +115,7 @@ const listofCurrentArticleLinks = [
   '/be-nl/blog/trends/maak-warmteberekening-makkelijk-met-ritherm',
 ];
 
+const changedLinks = [];
 
 const youtubeMessage =
   'Om deze video te bekijken, moet u de functionele cookies accepteren.';
@@ -160,6 +161,17 @@ const replaceAllEplanStrings = (main) => {
   }
 };
 
+const normalizeDocLink = (href) => {
+  if (!href) return ''; // Handle empty or invalid input
+
+  return decodeURIComponent(href)
+    .normalize('NFD') // Decompose characters into base letters and diacritics
+    .replace(/[\u0300-\u036f]/g, '') // Remove diacritical marks
+    .replace(/[^a-zA-Z0-9\-./:]/g, '') // Remove special characters except allowed ones
+    .replace(/\s+/g, '-') // Replace spaces with dashes
+    .toLowerCase(); // Convert to lowercase for consistency
+  }
+
 const normalizeLink = (href) => {
   if (!href) return ''; // Handle empty or invalid input
 
@@ -178,11 +190,12 @@ const normalizeLink = (href) => {
     console.log('matchingArticle', matchingArticle);
     
     if (matchingArticle) {
-      // If we found a match, use the entire matching path from our list
+      // Track the change only if we found a match
+      changedLinks.push({
+        original: href,
+        normalized: matchingArticle
+      });
       return matchingArticle;
-    } else {
-      // If no match found, use 'uncategorized' as fallback
-      return `/be-nl/blog/uncategorized/${pathWithoutNl}`;
     }
   }
 
@@ -610,7 +623,7 @@ export default {
       .replace(/\/$/, '')
       .replace(/\.html$/, '');
     console.log('link before', p);
-    p = normalizeLink(p);
+    p = normalizeDocLink(p);
     console.log('link after', p);
 
     const topicWithDashes = topic.trim().replace(/\s+/g, '-');
@@ -642,6 +655,7 @@ export default {
           newUrl: newUrl,
           previousTags: tagsFinal,
           currentCategory: topic,
+          changedLinks: changedLinks.length > 0 ? changedLinks : undefined // Only include if there are changes
         },
       },
     ];
