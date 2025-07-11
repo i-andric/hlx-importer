@@ -110,22 +110,12 @@ let changedLinks = [];
 const topicMappings = {
   // If categories were about to change, we could use this mapping to change them
   default: {
-    astuces: 'logiciel',
-    processus: 'tendances',
-    projets: 'projets',
+    tips: 'software',
+    trends: 'trends',
+    klantverhalen: 'projecten',
   },
   // If some of the urls are uncategorized, later we can add them here to map them to a right category
   urls: {
-    '/fr/le-defi-de-la-construction-de-panneaux-6-un-cablage-encore-plus-facile':
-      'logiciel',
-    '/fr/combien-coute-eplan': 'logiciel',
-    '/fr/travailler-plus-efficacement-avec-les-macros-grace-aux-objets-de-code-de-reservation':
-      'logiciel',
-    '/fr/une-ingenierie-efficace-les-3-elements-fondamentaux': 'logiciel',
-    '/fr/mise-a-jour-vers-une-nouvelle-version-deplan-un-plan-par-etapes-pratique':
-      'logiciel',
-    '/fr/faut-il-deplacer-larmoire-ou-linstallateur-la-3d-a-la-reponse':
-      'logiciel',
   },
 };
 
@@ -731,7 +721,7 @@ export default {
     // Convert teaser text to block
     processTeaserText(main, document);
 
-    const { topic } = processTopicAndTags(main);
+    let { topic } = processTopicAndTags(main);
 
     createMetadataBlock(main, document, topic);
 
@@ -757,7 +747,7 @@ export default {
     // !!!
     // Apply change of the category, only if REQUESTED by the client
     // !!!
-    // topic = mapTopic(topic, p);
+    topic = mapTopic(topic, p);
 
     const topicWithDashes = topic.trim().replace(/\s+/g, '-');
     const articlePath = `${topicWithDashes}${p}`;
