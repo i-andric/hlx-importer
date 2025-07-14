@@ -624,7 +624,23 @@ const processTopicAndTags = (main) => {
   return { topic };
 };
 
-const createMetadataBlock = (main, document, topic) => {
+const removeDuplicateTags = (tagsArray) => {
+  // Remove duplicates while preserving order
+  const uniqueTags = [];
+  const seen = new Set();
+  
+  tagsArray.forEach(tag => {
+    const normalizedTag = tag.toLowerCase().trim();
+    if (!seen.has(normalizedTag)) {
+      seen.add(normalizedTag);
+      uniqueTags.push(tag);
+    }
+  });
+  
+  return uniqueTags;
+};
+
+const createMetadataBlock = (main, document, topic, url) => {
   const meta = {};
 
   // Set meta description
@@ -651,18 +667,31 @@ const createMetadataBlock = (main, document, topic) => {
     meta.Author = authorName;
   }
 
+  // Map the topic using the same logic as mapTopic function
+  const mappedTopic = mapTopic(topic, url);
+
   // Taking all tags shown on the page and putting them in the meta
   const tagsWrapper = main.querySelector(CONFIG.selectors.tagsWrapper);
+  const tagsArray = [mappedTopic]; // Always start with mapped topic
+  
   if (tagsWrapper) {
     const tags = tagsWrapper.querySelectorAll(CONFIG.selectors.tagsLink);
     if (tags) {
-      const tagsArray = [topic];
       tags.forEach((tag) => {
         const tagName = tag.innerHTML.toLowerCase();
         tagsArray.push(tagName);
-        meta.Tags = tagsArray.join(', ');
       });
     }
+  }
+  
+  // Remove duplicate tags
+  const uniqueTags = removeDuplicateTags(tagsArray);
+  
+  // Ensure we always have at least the topic as a tag
+  if (uniqueTags.length === 0 || (uniqueTags.length === 1 && uniqueTags[0] === '')) {
+    meta.Tags = mappedTopic || 'uncategorized';
+  } else {
+    meta.Tags = uniqueTags.join(', ');
   }
 
   // Render meta table
@@ -723,7 +752,12 @@ export default {
 
     let { topic } = processTopicAndTags(main);
 
-    createMetadataBlock(main, document, topic);
+    let p = new URL(params.originalURL).pathname
+      .replace(/\/$/, '')
+      .replace(/\.html$/, '');
+    p = normalizeDocLink(p);
+
+    createMetadataBlock(main, document, topic, p);
 
     WebImporter.DOMUtils.remove(document, CONFIG.removeSelectors);
 
@@ -738,11 +772,6 @@ export default {
 
     // Replace all "EPLAN" with "Eplan"
     replaceAllEplanStrings(main);
-
-    let p = new URL(params.originalURL).pathname
-      .replace(/\/$/, '')
-      .replace(/\.html$/, '');
-    p = normalizeDocLink(p);
 
     // !!!
     // Apply change of the category, only if REQUESTED by the client
@@ -773,7 +802,6 @@ export default {
         path: p,
         report: {
           newUrl: newUrl,
-          // previousTags: tagsFinal,
           currentCategory: topic,
           changedLinks: changedLinks.length > 0 ? changedLinks : undefined,
         },

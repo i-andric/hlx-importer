@@ -13,6 +13,7 @@ const CONFIG = {
   removeSelectors: [
     'header',
     '.header',
+    '.hero',
     'nav',
     '.nav',
     'footer',
@@ -54,9 +55,18 @@ const getAuthorRole = (document) => {
 
 export default {
   preprocess: ({ document, url, html, params }) => {
+    // Check if URL contains "auteurs" - only process author pages
+    if (!url.includes('auteurs')) {
+      params.skip = true; // Skip processing for non-author URLs
+      return;
+    }
     params.foundSomethingInPreprocessing = true;
   },
   transformDOM: ({ document, url, html, params }) => {
+    // Double-check URL contains "auteurs" before processing
+    if (!url.includes('auteurs')) {
+      return null; // Skip processing
+    }
 
     const main = document.querySelector('body');
 
@@ -125,6 +135,11 @@ export default {
     html,
     params,
   }) => {
+
+    // Check if URL contains "auteurs" - only process author pages
+    if (!url.includes('auteurs')) {
+      return null; // Skip processing
+    }
 
     const author = getAuthorName(document);
     console.log('author', author);
