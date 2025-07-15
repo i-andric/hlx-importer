@@ -62,7 +62,7 @@ const CONFIG = {
     '.copyright',
     '.footer',
     '.bidonderwerpen',
-    '.cntcrumbs'
+    '.cntcrumbs',
   ],
 
   // Iframe processing configuration
@@ -110,13 +110,13 @@ let changedLinks = [];
 const topicMappings = {
   // If categories were about to change, we could use this mapping to change them
   default: {
+    'tips-tricks': 'software',
     tips: 'software',
     trends: 'trends',
     klantverhalen: 'projecten',
   },
   // If some of the urls are uncategorized, later we can add them here to map them to a right category
-  urls: {
-  },
+  urls: {},
 };
 
 const mapTopic = (topic, url) => {
@@ -420,7 +420,7 @@ const processIframes = (main, document, options = {}) => {
 const processIframeAsImage = (iframe, iframeSrc, imageHost) => {
   console.log('IFRAME', iframe);
   const iframeImage = document.createElement('img');
-  
+
   try {
     const u = new URL(iframeSrc);
     const originalHost = u.hostname.includes('hs-sites.com')
@@ -531,7 +531,11 @@ const removeImageWrappers = (main) => {
   if (images) {
     images.forEach((img) => {
       const parent = img.parentElement;
-      if (parent && parent.tagName === 'A' && parent.classList.contains('fancybox')) {
+      if (
+        parent &&
+        parent.tagName === 'A' &&
+        parent.classList.contains('fancybox')
+      ) {
         // Remove the anchor tag but keep the image
         parent.replaceWith(img);
       }
@@ -587,7 +591,10 @@ const processTopicAndTags = (main) => {
   topic = breadcrumbs.innerHTML;
   topic = breadcrumbs.children[0].children[1].textContent;
   // make it lowercase and remove spaces and special characters
-  topic = topic.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+  topic = topic
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
 
   // let topicFromTag = '';
   // let tagsFinal = '';
@@ -628,16 +635,48 @@ const removeDuplicateTags = (tagsArray) => {
   // Remove duplicates while preserving order
   const uniqueTags = [];
   const seen = new Set();
-  
-  tagsArray.forEach(tag => {
+
+  tagsArray.forEach((tag) => {
     const normalizedTag = tag.toLowerCase().trim();
     if (!seen.has(normalizedTag)) {
       seen.add(normalizedTag);
       uniqueTags.push(tag);
     }
   });
-  
+
   return uniqueTags;
+};
+
+const updateInternalLinks = (main) => {
+  const links = main.querySelectorAll('a[href]');
+  if (links) {
+    links.forEach((link) => {
+      const href = link.getAttribute('href');
+      if (href) {
+        let updatedHref = href;
+
+        // Check each old topic and replace with new mapped topic
+        Object.entries(topicMappings.default).forEach(
+          ([oldTopic, newTopic]) => {
+            // Check for old topic in the URL path
+            const oldTopicPattern = new RegExp(`/${oldTopic}/`, 'gi');
+            if (oldTopicPattern.test(updatedHref)) {
+              updatedHref = updatedHref.replace(
+                oldTopicPattern,
+                `/${newTopic}/`
+              );
+              console.log(`Updated internal link: ${href} -> ${updatedHref}`);
+            }
+          }
+        );
+
+        // Update the href if it changed
+        if (updatedHref !== href) {
+          link.setAttribute('href', updatedHref);
+        }
+      }
+    });
+  }
 };
 
 const createMetadataBlock = (main, document, topic, url) => {
@@ -673,7 +712,7 @@ const createMetadataBlock = (main, document, topic, url) => {
   // Taking all tags shown on the page and putting them in the meta
   const tagsWrapper = main.querySelector(CONFIG.selectors.tagsWrapper);
   const tagsArray = [mappedTopic]; // Always start with mapped topic
-  
+
   if (tagsWrapper) {
     const tags = tagsWrapper.querySelectorAll(CONFIG.selectors.tagsLink);
     if (tags) {
@@ -683,12 +722,15 @@ const createMetadataBlock = (main, document, topic, url) => {
       });
     }
   }
-  
+
   // Remove duplicate tags
   const uniqueTags = removeDuplicateTags(tagsArray);
-  
+
   // Ensure we always have at least the topic as a tag
-  if (uniqueTags.length === 0 || (uniqueTags.length === 1 && uniqueTags[0] === '')) {
+  if (
+    uniqueTags.length === 0 ||
+    (uniqueTags.length === 1 && uniqueTags[0] === '')
+  ) {
     meta.Tags = mappedTopic || 'uncategorized';
   } else {
     meta.Tags = uniqueTags.join(', ');
@@ -743,7 +785,8 @@ export default {
     // Add handling for linked images
     // processLinkedImages(main);
     // DISABLED because it is having lightbox gallery which is not supported by new blog
-
+    // Update internal links with new topic mappings
+    updateInternalLinks(main);
     // Remove anchor tags that wrap images
     removeImageWrappers(main);
 
