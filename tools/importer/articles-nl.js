@@ -7,8 +7,7 @@ const menuTopics = ['tips', 'trends', 'projecten'];
 // Next change this message to the one from the live website according to the language
 // Find the article which has youtube video and check the message (when cookies not accepted)
 // Sometimes this message could be seen on homepage if any youtube videos-just reject the cookies
-const youtubeMessage =
-  'Vous devez autoriser les cookies fonctionnels pour afficher cette vidéo.';
+const youtubeMessage = 'Vous devez autoriser les cookies fonctionnels pour afficher cette vidéo.';
 
 // Configuration object for all CSS selectors and classes used in the importer
 const CONFIG = {
@@ -134,12 +133,10 @@ const mapTopic = (topic, url) => {
   return topic;
 };
 
-const normalizeSpecialChars = (str) => {
-  return str
-    .normalize('NFD') // Decompose characters into base letters and diacritics
-    .replace(/[\u0300-\u036f]/g, '') // Remove diacritical marks
-    .toLowerCase();
-};
+const normalizeSpecialChars = (str) => str
+  .normalize('NFD') // Decompose characters into base letters and diacritics
+  .replace(/[\u0300-\u036f]/g, '') // Remove diacritical marks
+  .toLowerCase();
 
 const normalizeDocLink = (href) => {
   if (!href) return ''; // Handle empty or invalid input
@@ -189,8 +186,8 @@ const normalizeLink = (href) => {
 
     // Only remove query parameters for internal links
     if (
-      url.hostname === 'www.eplanexperience.nl' ||
-      url.hostname === 'localhost:3001'
+      url.hostname === 'www.eplanexperience.nl'
+      || url.hostname === 'localhost:3001'
     ) {
       if (url.search || url.hash) {
         return href.split('?')[0];
@@ -233,7 +230,7 @@ const makeProxySrcs = (main, host) => {
         }
       } catch (error) {
         console.warn(
-          `Unable to make proxy src for ${img.src}: ${error.message}`
+          `Unable to make proxy src for ${img.src}: ${error.message}`,
         );
       }
     });
@@ -247,7 +244,7 @@ const replaceAllEplanStrings = (main) => {
     main,
     NodeFilter.SHOW_TEXT,
     null,
-    false
+    false,
   );
   let node;
   while ((node = walker.nextNode())) {
@@ -288,19 +285,19 @@ const removeTables = (main) => {
 const unwrapTableElements = (table) => {
   const tbodyElements = table.querySelectorAll('tbody');
   if (tbodyElements) {
-    tbodyElements.forEach(function (tbody) {
+    tbodyElements.forEach((tbody) => {
       unwrapElement(tbody);
     });
   }
   const thElements = table.querySelectorAll('th');
   if (thElements) {
-    thElements.forEach(function (th) {
+    thElements.forEach((th) => {
       unwrapElement(th);
     });
   }
   const tdElements = table.querySelectorAll('td');
   if (tdElements) {
-    tdElements.forEach(function (td) {
+    tdElements.forEach((td) => {
       unwrapElement(td);
     });
   }
@@ -339,16 +336,16 @@ const createTableOfContents = (main, document) => {
     const toc = documentRef.createElement('div');
     const headings = [].slice.call(main.querySelectorAll(CONFIG.selectors.h2));
     if (headings) {
-      headings.forEach(function (heading, index) {
-        let anchor = documentRef.createElement('a');
+      headings.forEach((heading, index) => {
+        const anchor = documentRef.createElement('a');
         anchor.setAttribute('name', CONFIG.toc.anchorPrefix + index);
         anchor.setAttribute('id', CONFIG.toc.anchorPrefix + index);
 
-        let link = documentRef.createElement('a');
-        link.setAttribute('href', '#' + CONFIG.toc.anchorPrefix + index);
+        const link = documentRef.createElement('a');
+        link.setAttribute('href', `#${CONFIG.toc.anchorPrefix}${index}`);
         link.textContent = heading.textContent;
 
-        let div = documentRef.createElement('div');
+        const div = documentRef.createElement('div');
 
         // If you want to fill in TOC with h2s then uncomment bellow lines - this was legacy
         // div.setAttribute('class', heading.tagName.toLowerCase());
@@ -404,7 +401,7 @@ const processIframes = (main, document, options = {}) => {
                   const embCells = [[embedType], [iframeSrc]];
                   const embTable = WebImporter.DOMUtils.createTable(
                     embCells,
-                    document
+                    document,
                   );
                   iframe.replaceWith(embTable);
                 }
@@ -441,8 +438,7 @@ const processIframeAsImage = (iframe, iframeSrc, imageHost) => {
       },
     })
       .then((response) => {
-        if (!response.ok)
-          throw new Error(`HTTP error! Status: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
         return response.blob();
       })
       .then((blob) => {
@@ -473,7 +469,7 @@ const processIframeAsImage = (iframe, iframeSrc, imageHost) => {
 const processHeroImage = (main, title) => {
   const heroImage = main.querySelector(CONFIG.selectors.heroImage);
   if (heroImage) {
-    let backgroundImage = heroImage.style.backgroundImage;
+    let { backgroundImage } = heroImage.style;
 
     if (!backgroundImage || backgroundImage === 'none') {
       const computedStyle = window.getComputedStyle(heroImage);
@@ -532,9 +528,9 @@ const removeImageWrappers = (main) => {
     images.forEach((img) => {
       const parent = img.parentElement;
       if (
-        parent &&
-        parent.tagName === 'A' &&
-        parent.classList.contains('fancybox')
+        parent
+        && parent.tagName === 'A'
+        && parent.classList.contains('fancybox')
       ) {
         // Remove the anchor tag but keep the image
         parent.replaceWith(img);
@@ -560,7 +556,7 @@ const processTeaserText = (main, document) => {
       ];
       const teaserTable = WebImporter.DOMUtils.createTable(
         teaserCells,
-        document
+        document,
       );
 
       // Find the TOC table
@@ -663,11 +659,11 @@ const updateInternalLinks = (main) => {
             if (oldTopicPattern.test(updatedHref)) {
               updatedHref = updatedHref.replace(
                 oldTopicPattern,
-                `/${newTopic}/`
+                `/${newTopic}/`,
               );
               console.log(`Updated internal link: ${href} -> ${updatedHref}`);
             }
-          }
+          },
         );
 
         // Update the href if it changed
@@ -689,12 +685,8 @@ const createMetadataBlock = (main, document, topic, url) => {
   }
 
   // Set meta date
-  const date = document.querySelector(CONFIG.selectors.date);
-  if (date) {
-    const [day, month, year] = date.innerHTML.split('/');
-    const newDate = `${month}/${day}/${year}`;
-    meta.Date = newDate;
-  }
+  const df = new Intl.DateTimeFormat('en-US', { dateStyle: 'short' });
+  meta.Date = df.format(new Date());
 
   // Set meta author
   // get author from .bidpubl inside of a tag before first comma
@@ -728,8 +720,8 @@ const createMetadataBlock = (main, document, topic, url) => {
 
   // Ensure we always have at least the topic as a tag
   if (
-    uniqueTags.length === 0 ||
-    (uniqueTags.length === 1 && uniqueTags[0] === '')
+    uniqueTags.length === 0
+    || (uniqueTags.length === 1 && uniqueTags[0] === '')
   ) {
     meta.Tags = mappedTopic || 'uncategorized';
   } else {
@@ -745,7 +737,9 @@ const createMetadataBlock = (main, document, topic, url) => {
 };
 
 export default {
-  preprocess: ({ document, url, html, params }) => {
+  preprocess: ({
+    document, url, html, params,
+  }) => {
     params.foundSomethingInPreprocessing = true;
   },
   transform: ({ document, params }) => {
@@ -806,7 +800,7 @@ export default {
 
     // Remove unwanted text - cookie/youtube warning because it is copying it as text
     const elementWithText = Array.from(document.querySelectorAll('*')).find(
-      (el) => el.textContent.trim() === youtubeMessage
+      (el) => el.textContent.trim() === youtubeMessage,
     );
 
     if (elementWithText) {
@@ -844,7 +838,7 @@ export default {
         element: main,
         path: p,
         report: {
-          newUrl: newUrl,
+          newUrl,
           currentCategory: topic,
           changedLinks: changedLinks.length > 0 ? changedLinks : undefined,
         },
