@@ -45,6 +45,21 @@ const IMPORT_FILE_PICKER_CONTAINER = document.getElementById('import-file-picker
 
 const REPORT_FILENAME = 'import-report.xlsx';
 
+const parseImportTopics = (raw) => {
+  if (!raw || typeof raw !== 'string') return [];
+  return raw
+    .split(/[\n,]+/)
+    .map((t) => t.trim().toLowerCase())
+    .filter((s) => s.length > 0);
+};
+
+const getBlogOptionsParams = (fields) => ({
+  menuTopics: parseImportTopics(fields['import-topics']),
+  blogLangCountry: (fields['import-blog-lang-country'] && String(fields['import-blog-lang-country']).trim()) || 'es-es',
+  langVariation: (fields['import-lang-variation'] && String(fields['import-lang-variation']).trim()) || '/es/',
+  youtubeMessage: (fields['import-youtube-message'] && String(fields['import-youtube-message']).trim()) || '',
+});
+
 const ui = {};
 const config = {};
 const importStatus = {};
@@ -541,11 +556,15 @@ const attachListeners = () => {
 
                 if (frame.contentDocument) {
                   const { originalURL, replacedURL } = frame.dataset;
+                  const transformParams = {
+                    originalURL,
+                    ...getBlogOptionsParams(config.fields),
+                  };
 
                   const onLoadSucceeded = await config.importer.onLoad({
                     url: replacedURL,
                     document: frame.contentDocument,
-                    params: { originalURL },
+                    params: transformParams,
                   });
 
                   if (onLoadSucceeded) {
@@ -553,7 +572,7 @@ const attachListeners = () => {
                       url: replacedURL,
                       document: frame.contentDocument,
                       includeDocx,
-                      params: { originalURL },
+                      params: transformParams,
                     });
                     await config.importer.transform();
                   }

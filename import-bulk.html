@@ -38,6 +38,18 @@
                                 <sp-help-text slot="negative-help-text">Please enter valid URLs.</sp-help-text>
                             </sp-textfield>
                             <sp-accordion>
+                                <sp-accordion-item label="Blog Options">
+                                    <div>
+                                        <sp-field-label for="import-blog-lang-country">Blog language / country</sp-field-label>
+                                        <sp-textfield class="option-field" id="import-blog-lang-country" value="es-es" placeholder="e.g. es-es"></sp-textfield>
+                                        <sp-field-label for="import-lang-variation">Language URL prefix</sp-field-label>
+                                        <sp-textfield class="option-field" id="import-lang-variation" value="/es/" placeholder="/es/"></sp-textfield>
+                                        <sp-field-label for="import-youtube-message">YouTube / cookie text to strip</sp-field-label>
+                                        <sp-textfield class="option-field" id="import-youtube-message" multiline value="Vous devez autoriser les cookies fonctionnels pour afficher cette vidéo."></sp-textfield>
+                                        <sp-field-label for="import-topics">Tags as categories</sp-field-label>
+                                        <sp-textfield class="option-field" id="import-topics" multiline value="tendencias&#10;proyectos&#10;software&#10;backstage" placeholder="One per line or comma-separated"></sp-textfield>
+                                    </div>
+                                </sp-accordion-item>
                                 <sp-accordion-item label="Import Options">
                                     <div>
                                         <sp-field-label for="import-file-url" required>Transformation file URL</sp-field-label>
