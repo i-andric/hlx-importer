@@ -6,6 +6,12 @@ At the root of an AEM project, simply run:
 $ aem import
 ```
 
+or for the new improved version (blog specific) run:
+   ```
+   aem import --ui-repo https://github.com/i-andric/hlx-importer#main \
+     --open /tools/importer/hlx-importer/index.html
+   ```
+
 If you don't have aem cli, then please install it:
 ```
 $ npm install -g @adobe/aem-cli
@@ -14,7 +20,9 @@ $ npm install -g @adobe/aem-cli
 The `import` command clones the helix-import-ui repo for you.
 
 ## Step #1 - Download crawl report from a website
-- After the project is running on your local - it will be open automatically on http://localhost:3001/tools/importer/helix-importer-ui/index.html
+- After the project is running on your local, open the importer (default Adobe path, or your repo path), e.g.  
+  `http://localhost:3001/tools/importer/helix-importer-ui/index.html` **or**  
+  `http://localhost:3001/tools/importer/hlx-importer/index.html`
 - Go to Crawl tab and add your link that will extract all urls of the website
 - Click on "Download crawl report" - This will provide you excel file which will have all urls of the website.
 
@@ -22,7 +30,7 @@ The `import` command clones the helix-import-ui repo for you.
 
 ## Step #2 - Import URLs from Excel file
 - Go to "Import - Bulk" tab  and copy all urls from the excel file in the "URLS" field.
-- Expand the import options and change the Transformation file URL either  using: 
+- Expand the import options and change the Transformation file URL either using: 
 http://localhost:3001/tools/importer/authors.js for importing authors or 
 http://localhost:3001/tools/importer/articles.js for importing articles.
 - Click on "Import" button - This will import all articles/authors as docx files into your preferred folder. (There will be a prompt asking you which folder to import the urls in.)
