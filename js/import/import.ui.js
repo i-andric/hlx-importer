@@ -53,11 +53,74 @@ const parseImportTopics = (raw) => {
     .filter((s) => s.length > 0);
 };
 
+/** Full site paths for matching language-prefixed links; preserve case. */
+const parseImportArticleLinks = (raw) => {
+  if (!raw || typeof raw !== 'string') return [];
+  return raw
+    .split(/[\n,]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+};
+
+/**
+ * One line = "from, to" or "from: to" — rename a tag/topic from the site to the folder topic you want.
+ * Becomes topicMappings.default in params.
+ */
+const parseTopicRenameLines = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'string') return out;
+  raw.split(/\r?\n/).forEach((line) => {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) return;
+    const comma = t.indexOf(',');
+    const colon = t.indexOf(':');
+    let sep = -1;
+    if (comma >= 0 && (colon < 0 || comma <= colon)) sep = comma;
+    else if (colon >= 0) sep = colon;
+    if (sep < 0) return;
+    const from = t.slice(0, sep).trim();
+    const to = t.slice(sep + 1).trim();
+    if (from && to) out[from] = to;
+  });
+  return out;
+};
+
+/**
+ * One line = "article path, topic" — force a topic for that article path (e.g. uncategorized fixes).
+ * Path should match the normalized path used in the import (often starts with /fr/...).
+ * Becomes topicMappings.urls in params.
+ */
+const parseTopicByPathLines = (raw) => {
+  const out = {};
+  if (!raw || typeof raw !== 'string') return out;
+  raw.split(/\r?\n/).forEach((line) => {
+    const t = line.trim();
+    if (!t || t.startsWith('#')) return;
+    const comma = t.indexOf(',');
+    const colon = t.indexOf(':');
+    let sep = -1;
+    if (comma >= 0 && (colon < 0 || comma <= colon)) sep = comma;
+    else if (colon >= 0) sep = colon;
+    if (sep < 0) return;
+    const path = t.slice(0, sep).trim();
+    const topic = t.slice(sep + 1).trim();
+    if (path && topic) out[path] = topic;
+  });
+  return out;
+};
+
+const buildTopicMappings = (fields) => ({
+  default: parseTopicRenameLines(fields['import-topic-renames']),
+  urls: parseTopicByPathLines(fields['import-topic-by-path']),
+});
+
 const getBlogOptionsParams = (fields) => ({
   menuTopics: parseImportTopics(fields['import-topics']),
   blogLangCountry: (fields['import-blog-lang-country'] && String(fields['import-blog-lang-country']).trim()) || 'es-es',
   langVariation: (fields['import-lang-variation'] && String(fields['import-lang-variation']).trim()) || '/es/',
   youtubeMessage: (fields['import-youtube-message'] && String(fields['import-youtube-message']).trim()) || '',
+  articleLinkList: parseImportArticleLinks(fields['import-article-links']),
+  topicMappings: buildTopicMappings(fields),
 });
 
 const ui = {};

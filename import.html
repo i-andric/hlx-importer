@@ -55,6 +55,18 @@
                                         <sp-textfield class="option-field" id="import-youtube-message" multiline value="Vous devez autoriser les cookies fonctionnels pour afficher cette vidéo."></sp-textfield>
                                         <sp-field-label for="import-topics">Tags as categories</sp-field-label>
                                         <sp-textfield class="option-field" id="import-topics" multiline value="tendencias&#10;proyectos&#10;software&#10;backstage" placeholder="One per line or comma-separated"></sp-textfield>
+                                        <sp-field-label for="import-article-links">Article paths for link normalization (optional)</sp-field-label>
+                                        <sp-textfield class="option-field" id="import-article-links" multiline placeholder="/be-fr/blog/logiciel/..., /be-fr/blog/tendances/...">
+                                            <sp-help-text slot="help-text">When pages link using the Language URL prefix but real URLs are full paths on the site, paste those full paths here so internal links resolve correctly. Use paths like /locale/blog/category/slug — one per line or comma-separated (e.g. from a crawl report). Leave empty if you do not need this.</sp-help-text>
+                                        </sp-textfield>
+                                        <sp-field-label for="import-topic-renames">Rename topics from tags (optional)</sp-field-label>
+                                        <sp-textfield class="option-field" id="import-topic-renames" multiline value="astuces, logiciel&#10;processus, tendances&#10;projets, projets">
+                                            <sp-help-text slot="help-text">When the site uses a tag name but you want a different folder topic, add one line per change: old name, then new topic, separated by a comma (or use old: new). Example: astuces, logiciel. Lines starting with # are ignored.</sp-help-text>
+                                        </sp-textfield>
+                                        <sp-field-label for="import-topic-by-path">Topic for specific article paths (optional)</sp-field-label>
+                                        <sp-textfield class="option-field" id="import-topic-by-path" multiline value="/fr/le-defi-de-la-construction-de-panneaux-6-un-cablage-encore-plus-facile, logiciel&#10;/fr/combien-coute-eplan, logiciel&#10;/fr/travailler-plus-efficacement-avec-les-macros-grace-aux-objets-de-code-de-reservation, logiciel&#10;/fr/une-ingenierie-efficace-les-3-elements-fondamentaux, logiciel&#10;/fr/mise-a-jour-vers-une-nouvelle-version-deplan-un-plan-par-etapes-pratique, logiciel&#10;/fr/faut-il-deplacer-larmoire-ou-linstallateur-la-3d-a-la-reponse, logiciel">
+                                            <sp-help-text slot="help-text">For articles that end up wrong or uncategorized, set the topic by path. One line per article: paste the path (as in the import report, e.g. /fr/…), comma, then the topic folder name. Same comma or colon rule as above. Use for fixes after a test import.</sp-help-text>
+                                        </sp-textfield>
                                     </div>
                                 </sp-accordion-item>
                                 <sp-accordion-item label="Import Options">
