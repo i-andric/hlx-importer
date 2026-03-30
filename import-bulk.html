@@ -34,7 +34,7 @@
                         <form class="import-form">
                             <sp-field-label for="import-urls" required>URLs</sp-field-label>
                             <sp-textfield class="option-field" multiline id="import-urls">
-                                <sp-help-text slot="help-text">https://www.example.com/a<br>https://www.example.com/b</sp-help-text>
+                                <sp-help-text slot="help-text">One URL per line. Optional: set the article topic (must match a line in import-topics) with a tab, with &quot; | &quot;, or with a trailing comma: https://example.com/post&lt;tab&gt;proyectos or https://example.com/post, proyectos. Other page tags that are in import-topics are then omitted from metadata.</sp-help-text>
                                 <sp-help-text slot="negative-help-text">Please enter valid URLs.</sp-help-text>
                             </sp-textfield>
                             <sp-accordion>
@@ -47,7 +47,9 @@
                                         <sp-field-label for="import-youtube-message">Youtube message. Change this message to the one from the live website according to the language. (optional) Find the article which has youtube video and check the message (when cookies not accepted). Sometimes this message could be seen on homepage if any youtube videos-just reject the cookies</sp-field-label>
                                         <sp-textfield class="option-field" id="import-youtube-message" multiline value="Vous devez autoriser les cookies fonctionnels pour afficher cette vidéo."></sp-textfield>
                                         <sp-field-label for="import-topics">Add categories of the current blog posts.* Example: tendencias&#10;proyectos&#10;software&#10;backstage</sp-field-label>
-                                        <sp-textfield class="option-field" id="import-topics" multiline value="tendencias&#10;proyectos&#10;software&#10;backstage" placeholder="One per line or comma-separated"></sp-textfield>
+                                        <sp-textfield class="option-field" id="import-topics" multiline value="tendencias&#10;proyectos&#10;software&#10;backstage" placeholder="One per line or comma-separated">
+                                            <sp-help-text slot="help-text">Allowed category tags from the live site. When a URL line includes a topic, metadata keeps only that tag; other on-page tags that match this list are omitted.</sp-help-text>
+                                        </sp-textfield>
                                         <sp-field-label for="import-article-links">Article paths for link normalization - changed relative links in articles (optional) Example: /be-fr/blog/logiciel/..., /be-fr/blog/tendances/...</sp-field-label>
                                         <sp-textfield class="option-field" id="import-article-links" multiline placeholder="/be-fr/blog/logiciel/..., /be-fr/blog/tendances/...">
                                             <sp-help-text slot="help-text">When pages link using the Language URL prefix but real URLs are full paths on the site, paste those full paths here so internal links resolve correctly. Use paths like /locale/blog/category/slug — one per line or comma-separated (e.g. from a crawl report). Leave empty if you do not need this.</sp-help-text>

@@ -109,6 +109,42 @@ const parseTopicByPathLines = (raw) => {
   return out;
 };
 
+/**
+ * One import line = URL only, or URL + topic from import-topics.
+ * Topic: tab, " | ", or last comma if the part after it looks like a tag (not URL).
+ */
+const parseImportUrlLine = (line) => {
+  const trimmed = (line && String(line).trim()) || '';
+  if (!trimmed) return { url: '', topic: '' };
+  if (trimmed.includes('\t')) {
+    const i = trimmed.indexOf('\t');
+    const url = trimmed.slice(0, i).trim();
+    const topic = trimmed.slice(i + 1).trim().toLowerCase();
+    return { url, topic };
+  }
+  const pipeSep = /\s+\|\s+/;
+  if (pipeSep.test(trimmed)) {
+    const parts = trimmed.split(pipeSep);
+    const url = parts[0].trim();
+    const topic = parts.slice(1).join(' | ').trim().toLowerCase();
+    return { url, topic };
+  }
+  const lastComma = trimmed.lastIndexOf(',');
+  if (lastComma > 0) {
+    const maybeTopic = trimmed.slice(lastComma + 1).trim();
+    const maybeUrl = trimmed.slice(0, lastComma).trim();
+    if (
+      maybeTopic.length > 0
+      && !maybeTopic.includes('://')
+      && !maybeTopic.includes('/')
+      && !/[=&]/.test(maybeTopic)
+    ) {
+      return { url: maybeUrl, topic: maybeTopic.toLowerCase() };
+    }
+  }
+  return { url: trimmed, topic: '' };
+};
+
 const buildTopicMappings = (fields) => ({
   default: parseTopicRenameLines(fields['import-topic-renames']),
   urls: parseTopicByPathLines(fields['import-topic-by-path']),
@@ -558,7 +594,13 @@ const attachListeners = () => {
     importStatus.startTime = Date.now();
     const processNext = async () => {
       if (urlsArray.length > 0) {
-        const url = urlsArray.pop();
+        const line = urlsArray.pop();
+        const { url, topic: lineTopic } = parseImportUrlLine(line);
+        const assignedTopicFromLine = lineTopic || undefined;
+        if (!url) {
+          processNext();
+          return;
+        }
         const { remote, proxy } = getProxyURLSetup(url, config.origin);
         const src = proxy.url;
 
@@ -621,6 +663,7 @@ const attachListeners = () => {
                   const { originalURL, replacedURL } = frame.dataset;
                   const transformParams = {
                     originalURL,
+                    ...(assignedTopicFromLine ? { assignedTopic: assignedTopicFromLine } : {}),
                     ...getBlogOptionsParams(config.fields),
                   };
 

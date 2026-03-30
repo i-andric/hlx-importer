@@ -5,13 +5,15 @@ let changedLinks = [];
 
 // topicMappings from Import UI (Blog Options): built from plain lists → params.topicMappings
 //   default: tag renames (import-topic-renames), urls: path → topic (import-topic-by-path)
+// params.assignedTopic: URL line forces category + single tag (overrides path-based urls map)
 
-const mapTopic = (topic, url, topicMappings) => {
+const mapTopic = (topic, urlPath, topicMappings, options) => {
   const def = (topicMappings && topicMappings.default) || {};
   const urls = (topicMappings && topicMappings.urls) || {};
+  const skipPath = options && options.skipPathOverride;
 
-  if (url && urls[url]) {
-    return urls[url];
+  if (!skipPath && urlPath && urls[urlPath]) {
+    return urls[urlPath];
   }
 
   if (def[topic]) {
@@ -75,7 +77,6 @@ const normalizeLink = (href, langVariation, articleLinkList) => {
   try {
     // Try to parse the URL to detect if it's a complex URL with query parameters
     const url = new URL(href);
-    
     // Only remove query parameters for internal links
     if (url.hostname === 'es.eplan.blog' || url.hostname === 'localhost:3001') {
       if (url.search || url.hash) {
@@ -153,7 +154,7 @@ const transformLinks = (main, langVariation, articleLinkList) => {
   });
 };
 
-const createMetadataBlock = (main, document, html, params, urlStr) => {
+const createMetadataBlock = (main, document, options = {}) => {
   const meta = {};
 
   // Set meta description
@@ -176,21 +177,25 @@ const createMetadataBlock = (main, document, html, params, urlStr) => {
     meta.Author = author.content;
   }
 
-  // Taking all tags shown on the page and putting them in the meta
-  const tagsWrapper = main.querySelector('.tags');
-  if (tagsWrapper) {
-    const tags = tagsWrapper.querySelectorAll('.tags__link');
-    if (tags) {
-      const tagsArray = [];
-      tags.forEach((tag) => {
-        const tagName = tag.innerHTML.toLowerCase();
-        tagsArray.push(tagName);
-        meta.Tags = tagsArray.join(', ');
-      });
+  if (options.tagsOverride !== undefined) {
+    if (options.tagsOverride !== '') {
+      meta.Tags = options.tagsOverride;
+    }
+  } else {
+    const tagsWrapper = main.querySelector('.tags');
+    if (tagsWrapper) {
+      const tags = tagsWrapper.querySelectorAll('.tags__link');
+      if (tags) {
+        const tagsArray = [];
+        tags.forEach((tag) => {
+          const tagName = tag.innerHTML.toLowerCase();
+          tagsArray.push(tagName);
+          meta.Tags = tagsArray.join(', ');
+        });
+      }
     }
   }
 
-  // Render meta table
   const block = WebImporter.Blocks.getMetadataBlock(document, meta);
 
   main.append(block);
@@ -505,43 +510,56 @@ export default {
       }
     }
 
-    createMetadataBlock(main, document);
+    // menuTopics = import-topics. assignedTopic (URL line) → single tag in metadata.
+    const menuTopics = Array.isArray(params.menuTopics) ? params.menuTopics : [];
+    const assignedRaw = (params.assignedTopic && String(params.assignedTopic).trim()) || '';
+    const assignedLower = assignedRaw.toLowerCase();
 
-    // Because live websites doesn't have categories but tags - we are taking tags and trying to find the category
-    // If category not there in import excel file then it will be Uncategorized - those need to be raised with the client
     let topic = '';
     let topicFromTag = '';
     let tagsFinal = '';
-    const menuTopics = Array.isArray(params.menuTopics) ? params.menuTopics : [];
+    let tagsOverride;
 
     const tagsWrapper = main.querySelector('.tags');
+    const rawTags = [];
     if (tagsWrapper) {
-      const tags = tagsWrapper.querySelectorAll('.tags__link');
-      if (tags) {
-        const tagsArray = [];
-        tags.forEach((tag) => {
-          const tagName = tag.innerHTML.toLowerCase();
-          tagsArray.push(tagName);
-        });
-        let topicString = tagsArray.toString();
-
-        let nonePresent = tagsArray.every((str) => {
-          if (!menuTopics.includes(str)) {
-            return true;
-          }
-          topicFromTag = str;
-          return false;
-        });
-
-        if (nonePresent) {
-          topic = 'Uncategorized';
-          tagsFinal = topicString;
-        } else {
-          topic = topicFromTag;
-          tagsFinal = topicString;
-        }
-      }
+      tagsWrapper.querySelectorAll('.tags__link').forEach((tag) => {
+        rawTags.push(tag.innerHTML.toLowerCase());
+      });
     }
+
+    const tagsOnPageStr = rawTags.join(', ');
+
+    if (assignedLower) {
+      const canonical = menuTopics.find((m) => m.toLowerCase() === assignedLower);
+      if (!canonical && menuTopics.length > 0) {
+        console.warn(
+          `[import] assigned topic "${assignedRaw}" is not in import-topics; using it as-is.`
+        );
+      }
+      topic = canonical || assignedLower;
+      tagsFinal = tagsOnPageStr;
+      tagsOverride = topic;
+    } else if (rawTags.length) {
+      const nonePresent = rawTags.every((str) => {
+        if (!menuTopics.includes(str)) {
+          return true;
+        }
+        topicFromTag = str;
+        return false;
+      });
+
+      if (nonePresent) {
+        topic = 'Uncategorized';
+        tagsFinal = tagsOnPageStr;
+      } else {
+        topic = topicFromTag;
+        tagsFinal = tagsOnPageStr;
+      }
+      tagsOverride = rawTags.join(', ');
+    }
+
+    createMetadataBlock(main, document, { tagsOverride });
 
     WebImporter.DOMUtils.remove(document, [
       '.tags',
@@ -570,7 +588,9 @@ export default {
     // !!!
     // Apply change of the category, only if REQUESTED by the client
     // !!!
-    topic = mapTopic(topic, p, topicMappings);
+    topic = mapTopic(topic, p, topicMappings, {
+      skipPathOverride: !!assignedLower,
+    });
 
     const topicWithDashes = topic.trim().replace(/\s+/g, '-');
     const articlePath = `${topicWithDashes}${p}`;
