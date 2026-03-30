@@ -59,7 +59,7 @@
                                         </sp-textfield>
                                         <sp-field-label for="import-article-links">Article paths for link normalization (optional)</sp-field-label>
                                         <sp-textfield class="option-field" id="import-article-links" multiline placeholder="/be-fr/blog/logiciel/..., /be-fr/blog/tendances/...">
-                                            <sp-help-text slot="help-text">When pages link using the Language URL prefix but real URLs are full paths on the site, paste those full paths here so internal links resolve correctly. Use paths like /locale/blog/category/slug — one per line or comma-separated (e.g. from a crawl report). Leave empty if you do not need this.</sp-help-text>
+                                            <sp-help-text slot="help-text">Target paths per article (one per line or comma-separated). Rewrites internal links from /es/… paths, root-relative URLs, and absolute https://…eplan.blog/… URLs when a list entry contains the same slug or path. Leave empty if not needed.</sp-help-text>
                                         </sp-textfield>
                                         <sp-field-label for="import-topic-renames">Rename topics from tags (optional)</sp-field-label>
                                         <sp-textfield class="option-field" id="import-topic-renames" multiline value="astuces, logiciel&#10;processus, tendances&#10;projets, projets">

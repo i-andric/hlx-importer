@@ -41,44 +41,118 @@ const normalizeDocLink = (href) => {
     .toLowerCase(); // Convert to lowercase for consistency
 };
 
-const normalizeLink = (href, langVariation, articleLinkList) => {
-  if (!href) return ''; // Handle empty or invalid input
-  const langPrefix = langVariation && typeof langVariation === 'string' ? langVariation : '';
+/** Hosts whose links should be matched against import-article-links (not only lang-prefixed paths). */
+const isInternalBlogHost = (hostname) => {
+  if (!hostname) return false;
+  const h = String(hostname).toLowerCase();
+  return h === 'localhost'
+    || h === '127.0.0.1'
+    || h.endsWith('.eplan.blog')
+    || h === 'eplan.blog';
+};
+
+const pushArticleListCandidate = (set, rawSegment) => {
+  if (!rawSegment || typeof rawSegment !== 'string') return;
+  try {
+    const n = normalizeSpecialChars(decodeURIComponent(rawSegment));
+    if (n) set.add(n);
+  } catch {
+    const n = normalizeSpecialChars(rawSegment);
+    if (n) set.add(n);
+  }
+};
+
+const pushPathnameCandidates = (set, pathname, langPrefix) => {
+  if (!pathname || pathname === '/') return;
+  const trimmed = pathname.replace(/^\/+/, '').split('?')[0];
+  if (!trimmed) return;
+  pushArticleListCandidate(set, trimmed);
+  const segs = trimmed.split('/').filter(Boolean);
+  if (segs.length > 0) {
+    pushArticleListCandidate(set, segs[segs.length - 1]);
+  }
+  const langSeg = langPrefix && String(langPrefix).replace(/^\/+|\/+$/g, '');
+  if (langSeg && segs[0] === langSeg && segs.length > 1) {
+    pushArticleListCandidate(set, segs.slice(1).join('/'));
+  }
+};
+
+/**
+ * Path fragments derived from an anchor href so we can match import-article-links entries.
+ * Previously only hrefs starting with langVariation (e.g. /es/) were considered; absolute
+ * URLs (https://es.eplan.blog/...) and other root-relative paths were ignored.
+ */
+const collectArticleLinkPathCandidates = (href, langPrefix, baseURL) => {
+  const candidates = new Set();
+  const noQueryHref = href.split('?')[0];
+
+  if (langPrefix && noQueryHref.startsWith(langPrefix)) {
+    pushArticleListCandidate(candidates, noQueryHref.substring(langPrefix.length));
+  }
+
+  if (noQueryHref.startsWith('/') && !noQueryHref.startsWith('//')) {
+    pushPathnameCandidates(candidates, noQueryHref, langPrefix);
+  }
+
+  try {
+    const u = new URL(href);
+    if (isInternalBlogHost(u.hostname)) {
+      pushPathnameCandidates(candidates, u.pathname, langPrefix);
+    }
+  } catch {
+    /* relative or invalid absolute */
+  }
+
+  if (baseURL) {
+    try {
+      const u = new URL(href, baseURL);
+      if (isInternalBlogHost(u.hostname)) {
+        pushPathnameCandidates(candidates, u.pathname, langPrefix);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return Array.from(candidates).sort((a, b) => b.length - a.length);
+};
+
+const findArticleLinkListMatch = (href, langVariation, articleLinkList, baseURL) => {
   const linkList = Array.isArray(articleLinkList) ? articleLinkList : [];
+  if (!linkList.length || !href) return null;
+  const langPrefix = langVariation && typeof langVariation === 'string' ? langVariation : '';
 
-  // Handle links with language variation
-  if (langPrefix && href.startsWith(langPrefix)) {
-    // Remove query parameters by taking everything before '?'
-    const basePath = href.split('?')[0];
-    const pathWithoutLangVariation = basePath.substring(langPrefix.length);
-
-    // Decode URL-encoded characters first, then normalize
-    const decodedPath = decodeURIComponent(pathWithoutLangVariation);
-    const normalizedPath = normalizeSpecialChars(decodedPath);
-
-    // Try to find a matching article in the list
+  const candidates = collectArticleLinkPathCandidates(href, langPrefix, baseURL);
+  for (let i = 0; i < candidates.length; i += 1) {
+    const normalizedPath = candidates[i];
     const matchingArticle = linkList.find((matchingLink) => {
-      // Decode and normalize the matching link as well
       const decodedMatchingLink = decodeURIComponent(matchingLink);
       const normalizedLink = normalizeSpecialChars(decodedMatchingLink);
       return normalizedLink.includes(normalizedPath);
     });
+    if (matchingArticle) return matchingArticle;
+  }
+  return null;
+};
 
-    if (matchingArticle) {
-      // Track the change only if we found a match
-      changedLinks.push({
-        original: href,
-        normalized: matchingArticle,
-      });
-      return matchingArticle;
-    }
+const normalizeLink = (href, langVariation, articleLinkList, baseURL) => {
+  if (!href) return ''; // Handle empty or invalid input
+  const linkList = Array.isArray(articleLinkList) ? articleLinkList : [];
+
+  const listMatch = findArticleLinkListMatch(href, langVariation, articleLinkList, baseURL);
+  if (listMatch) {
+    changedLinks.push({
+      original: href,
+      normalized: listMatch,
+    });
+    return listMatch;
   }
 
   try {
     // Try to parse the URL to detect if it's a complex URL with query parameters
     const url = new URL(href);
     // Only remove query parameters for internal links
-    if (url.hostname === 'es.eplan.blog' || url.hostname === 'localhost:3001') {
+    if (isInternalBlogHost(url.hostname) || url.hostname === 'localhost:3001') {
       if (url.search || url.hash) {
         return href.split('?')[0];
       }
@@ -139,13 +213,12 @@ const replaceAllEplanStrings = (main) => {
   }
 };
 
-const transformLinks = (main, langVariation, articleLinkList) => {
+const transformLinks = (main, langVariation, articleLinkList, baseURL) => {
   main.querySelectorAll('a').forEach((articleLink) => {
     const href = articleLink.getAttribute('href');
     if (href) {
       try {
-        // Normalize the href link
-        const normalizedHref = normalizeLink(href, langVariation, articleLinkList);
+        const normalizedHref = normalizeLink(href, langVariation, articleLinkList, baseURL);
         articleLink.setAttribute('href', normalizedHref);
       } catch (error) {
         console.warn(`Unable to normalize link: ${href} - ${error.message}`);
@@ -605,7 +678,7 @@ export default {
       p = `${p}index`;
     }
 
-    transformLinks(main, langVariation, articleLinkList);
+    transformLinks(main, langVariation, articleLinkList, params.originalURL);
 
     const newUrl =
       'https://main--eplan-blog-eds--comwrap.hlx.page/' +
